@@ -4,7 +4,8 @@
 No changes to highlight.
 
 ## Bug Fixes:
-No changes to highlight.
+* Prevent requests to the `/api` endpoint from skipping the queue if the queue is enabled for that event 
+   by [@freddyaboulton](https://github.com/freddyaboulton) in [PR 2493](https://github.com/gradio-app/gradio/pull/2493)
 
 ## Documentation Changes:
 No changes to highlight.
