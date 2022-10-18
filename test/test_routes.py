@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import gradio
-from gradio import Blocks, Interface, Textbox, close_all, routes
+from gradio import Blocks, Button, Interface, Number, Textbox, close_all, routes
 
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
@@ -156,6 +156,7 @@ class TestGeneratorRoutes:
         response = client.post(
             "/api/predict/",
             json={"data": ["abc"], "fn_index": 0, "session_hash": "11"},
+            headers={"Authorization": f"Bearer {app.queue_token}"},
         )
         output = dict(response.json())
         assert output["data"] == ["a"]
@@ -163,6 +164,7 @@ class TestGeneratorRoutes:
         response = client.post(
             "/api/predict/",
             json={"data": ["abc"], "fn_index": 0, "session_hash": "11"},
+            headers={"Authorization": f"Bearer {app.queue_token}"},
         )
         output = dict(response.json())
         assert output["data"] == ["b"]
@@ -170,6 +172,7 @@ class TestGeneratorRoutes:
         response = client.post(
             "/api/predict/",
             json={"data": ["abc"], "fn_index": 0, "session_hash": "11"},
+            headers={"Authorization": f"Bearer {app.queue_token}"},
         )
         output = dict(response.json())
         assert output["data"] == ["c"]
@@ -177,6 +180,7 @@ class TestGeneratorRoutes:
         response = client.post(
             "/api/predict/",
             json={"data": ["abc"], "fn_index": 0, "session_hash": "11"},
+            headers={"Authorization": f"Bearer {app.queue_token}"},
         )
         output = dict(response.json())
         assert output["data"] == [None]
@@ -184,6 +188,7 @@ class TestGeneratorRoutes:
         response = client.post(
             "/api/predict/",
             json={"data": ["abc"], "fn_index": 0, "session_hash": "11"},
+            headers={"Authorization": f"Bearer {app.queue_token}"},
         )
         output = dict(response.json())
         assert output["data"] == ["a"]
@@ -277,6 +282,56 @@ def test_mount_gradio_app_set_dev_mode_false():
         route for route in app.routes if isinstance(route, starlette.routing.Mount)
     )
     assert not gradio_fast_api.app.blocks.dev_mode
+
+
+def test_predict_route_is_blocked_if_queue_enabled():
+    io = Interface(lambda x: x, "text", "text", examples=[["freddy"]]).queue()
+    app, _, _ = io.launch(prevent_thread_lock=True)
+    client = TestClient(app)
+    result = client.post(
+        "/api/predict", json={"fn_index": 0, "data": [5], "session_hash": "foo"}
+    )
+    assert result.status_code == 401
+
+
+def test_predict_route_not_blocked_if_queue_disabled():
+    with Blocks() as demo:
+        input = Textbox()
+        output = Textbox()
+        number = Number()
+        button = Button()
+        button.click(
+            lambda x: f"Hello, {x}!", input, output, queue=False, api_name="not_blocked"
+        )
+        button.click(lambda: 42, None, number, queue=True, api_name="blocked")
+    app, _, _ = demo.queue().launch(prevent_thread_lock=True)
+    client = TestClient(app)
+
+    result = client.post("/api/blocked", json={"data": [], "session_hash": "foo"})
+    assert result.status_code == 401
+    result = client.post(
+        "/api/not_blocked", json={"data": ["freddy"], "session_hash": "foo"}
+    )
+    assert result.status_code == 200
+    assert result.json()["data"] == ["Hello, freddy!"]
+
+
+def test_predict_route_not_blocked_if_routes_open():
+    with Blocks() as demo:
+        input = Textbox()
+        output = Textbox()
+        button = Button()
+        button.click(
+            lambda x: f"Hello, {x}!", input, output, queue=True, api_name="not_blocked"
+        )
+    app, _, _ = demo.queue(api_open=True).launch(prevent_thread_lock=True)
+    client = TestClient(app)
+
+    result = client.post(
+        "/api/not_blocked", json={"data": ["freddy"], "session_hash": "foo"}
+    )
+    assert result.status_code == 200
+    assert result.json()["data"] == ["Hello, freddy!"]
 
 
 if __name__ == "__main__":
