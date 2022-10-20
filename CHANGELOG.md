@@ -7,7 +7,7 @@ No changes to highlight.
 No changes to highlight.
 
 ## Documentation Changes:
-No changes to highlight.
+* Added an example interactive dashboard to the "Tabular & Plots" section of the Demos page by [@freddyaboulton](https://github.com/freddyaboulton) in [PR 2508](https://github.com/gradio-app/gradio/pull/2508)
 
 ## Testing and Infrastructure Changes:
 No changes to highlight.
